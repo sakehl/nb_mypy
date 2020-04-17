@@ -5,7 +5,7 @@ Add mypy type-checking to jupyter/ipython, which respects history.
 Save this script to your ipython profile's startup directory
 and the jupyter/ipython shell will do typecheck automatically.
 
-Ipython profile directory can be found via `ipython locate [profile]` 
+Ipython profile directory can be found via `ipython locate [profile]`
 For example, this file could exist on a path like this on linux:
 /home/yourusername/.ipython/profile_default/startup/typecheck.py
 
@@ -13,10 +13,17 @@ Current version was inspired by github user BradyHu
 https://gist.github.com/BradyHu/f4dc997d4b53f9b23e1120940fb8f0d1
 """
 
+__version__ = '2020.4.1'
+
 import ast
 import re
 from IPython import get_ipython
 from IPython.core.magic import register_line_magic
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 # List names in names objects, or tuples.
 # The only two options which can be assigned to
@@ -39,10 +46,11 @@ class Names(ast.NodeVisitor):
     def visit_Attribute(self, node):
         if(self.replace):
             self.visit(node.value)
-    
+
     def visit_Subscript(self, node):
         if(self.replace):
             self.visit(node.value)
+
 
 class NamesLister(ast.NodeVisitor):
     """Gather the names of all assigned variables, classes and functions.
@@ -142,14 +150,13 @@ class __MyPyIPython:
         self.mypy_typecheck = True
         self.debug = False
 
-
         def commentMagic(s: str) -> str:
             """Comments out specific iPython things,
             which are not valid python, such as line magic,
-            help and shell escapes"""
-        
+            help and shell escapes.
+            """
             news = s.lstrip()
-            
+
             if(len(news) == 0):
                 return s
             fst = news[0]
@@ -170,7 +177,6 @@ class __MyPyIPython:
 
             return begin + line + str(nr) + end
 
-
         def mypy_tmp(cell, *args, **kwargs):
             """Function that applies typechecking, and afterwards
             calls the normal function of the cell"""
@@ -182,7 +188,6 @@ class __MyPyIPython:
                     from mypy import api
                     import astor
                     from IPython.core.interactiveshell import ExecutionResult
-                    
 
                     #If we are cell magic, we don't have to type check
                     if(cell.startswith("%%")):
@@ -191,23 +196,24 @@ class __MyPyIPython:
                     # Filter ipython related stuff
                     # We just comment it, since we still need the line numbers to match
                     cell_filter = functools.reduce(lambda a, b: a + "\n" + b,
-                                                map(commentMagic, cell.split('\n')))
+                                                   map(commentMagic, cell.split('\n')))
                     cell_p = None
                     try:
                         cell_p = ast.parse(cell_filter)
                     except SyntaxError as e:
-                        traceback.print_exc(0)
-                        return ExecutionResult(e)
-
+                        # logger.exception("SyntaxError")
+                        # return ExecutionResult(e)
+                        return mypy_tmp_func(cell, *args, **kwargs)
                     getCell = NamesLister()
                     getCell.visit(cell_p)
                     newnames = getCell.names
                     remove = newnames & self.mypy_names
-                    if(len(remove) > 0):
+                    if len(remove):
                         try:
                             mypy_cells_ast = ast.parse(self.mypy_cells)
-                        except:
-                            print(self.mypy_cells)
+                        except SyntaxError:
+                            if self.debug:
+                                logger.debug(self.mypy_cells)
                             return mypy_tmp_func(cell, *args, **kwargs)
                         new_mypy_cells_ast = Replacer(remove).visit(mypy_cells_ast)
                         self.mypy_cells = astor.to_source(new_mypy_cells_ast)
@@ -216,8 +222,8 @@ class __MyPyIPython:
 
                     mypy_cells_length = len(self.mypy_cells.split('\n'))-1
                     self.mypy_cells += (cell_filter + '\n')
-                    if(self.debug):
-                        print(self.mypy_cells)
+                    if self.debug:
+                        logger.debug(self.mypy_cells)
 
                     mypy_result = api.run(
                         ['--ignore-missing-imports', '--allow-redefinition', '-c', self.mypy_cells])
@@ -226,20 +232,18 @@ class __MyPyIPython:
                             compiled = re.compile('(<[a-z]+>:)(\\d+)(.*?)$').findall(line)
                             if len(compiled) > 0:
                                 l, n, r = compiled[0]
-                                # if(self.debug and "already defined" in r):
-                                    # print(r)
-                                    # continue
                                 if int(n) > mypy_cells_length:
                                     n = str(int(n)-mypy_cells_length)
                                     r = fixLineNr(r, mypy_cells_length)
-                                    print("".join(["<cell>", n, r]))
+                                    logger.info("".join(["<cell>", n, r]))
 
                     if mypy_result[1]:
-                        print(mypy_result[1])
-                except:
-                    print("Error in typechecker, you can turn it off with '%turnOffTyCheck'")
-                    if(self.debug):
-                        traceback.print_exc(0)
+                        logger.error(mypy_result[1])
+
+                except Exception:
+                    logger.critical("Error in typechecker, you can turn it off with '%turnOffTyCheck'")
+                    if self.debug:
+                        logger.exception("Fatal error: please report")
 
             return mypy_tmp_func(cell, *args, **kwargs)
 
@@ -250,7 +254,7 @@ class __MyPyIPython:
 
     def start(self):
         self.mypy_typecheck = True
-    
+
     def debugOn(self):
         self.debug = True
 
@@ -259,22 +263,29 @@ class __MyPyIPython:
 
 __TypeChecker = __MyPyIPython()
 
+
 @register_line_magic
 def turnOffTyCheck(line):
     "Turned off type checker"
     __TypeChecker.stop()
+
 
 @register_line_magic
 def turnOnTyCheck(line):
     "Turned on type checker"
     __TypeChecker.start()
 
+
 @register_line_magic
 def turnOnTyDebug(line):
     "Turned on type checker"
     __TypeChecker.debugOn()
 
+
 @register_line_magic
 def turnOffTyDebug(line):
     "Turned on type checker"
     __TypeChecker.debugOff()
+
+
+logger.info(f"typecheck.py version {__version__}")
