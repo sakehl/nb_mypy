@@ -147,7 +147,7 @@ class __MyPyIPython:
         self.mypy_names = set()
         mypy_shell = get_ipython()
         mypy_tmp_func = mypy_shell.run_cell
-        self.mypy_typecheck = True
+        self.mypy_typecheck = False
         self.debug = False
 
         def first_none_whitspace(s: str) -> int:
@@ -158,7 +158,7 @@ class __MyPyIPython:
                     i += 1
                 else:
                     break
-            
+
             return i
 
 
@@ -218,7 +218,7 @@ class __MyPyIPython:
                         traceback.print_exception(exc_type, exc_value, exc_traceback,limit=0)
                         # logger.exception("SyntaxError")
                         return ExecutionResult(e)
-                    
+
                     getCell = NamesLister()
                     getCell.visit(cell_p)
                     newnames = getCell.names
@@ -264,6 +264,11 @@ class __MyPyIPython:
 
         mypy_shell.run_cell = mypy_tmp
 
+    def state(self):
+        on_off = {True: 'On', False: 'Off'}
+        debug_on_off = {True: 'DebugOn', False: 'DebugOff'}
+        logger.info(f"nb_mypy state: {on_off[self.mypy_typecheck]} {debug_on_off[self.debug]}")
+
     def stop(self):
         self.mypy_typecheck = False
 
@@ -301,6 +306,22 @@ def turnOnTyDebug(line):
 def turnOffTyDebug(line):
     "Turned on type checker"
     __TypeChecker.debugOff()
+
+
+@register_line_magic
+def nb_mypy(line):
+    """Inspect or modify mypy autochecking state.
+    """
+    switcher = {
+        '': __TypeChecker.state,
+        'On': __TypeChecker.start,
+        'Off': __TypeChecker.stop,
+        'DebugOn': __TypeChecker.debugOn,
+        'DebugOff': __TypeChecker.debugOff,
+    }
+    # logger.info(f"line magic argument: {line!r}")
+    unknown = lambda: logger.error(f"nb_mypy: Unknown argument\nValid arguments: {list(switcher.keys())!r}")
+    switcher.get(line,unknown)()
 
 
 logger.info(f"typecheck.py version {__version__}")
