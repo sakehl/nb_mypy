@@ -150,19 +150,31 @@ class __MyPyIPython:
         self.mypy_typecheck = True
         self.debug = False
 
+        def first_none_whitspace(s: str) -> int:
+            "Get the index of the first non whitespace char."
+            i = 0
+            for c in s:
+                if c.isspace():
+                    i += 1
+                else:
+                    break
+            
+            return i
+
+
         def commentMagic(s: str) -> str:
             """Comments out specific iPython things,
             which are not valid python, such as line magic,
             help and shell escapes.
             """
-            news = s.lstrip()
+            i = first_none_whitspace(s)
 
-            if(len(news) == 0):
+            if i >= len(s):
                 return s
-            fst = news[0]
-            lst = news[-1]
+            fst = s[i]
+            lst = s[-1]
             if fst in "%!?" or lst in "?":
-                return "# " + s
+                return s[:i] + "pass #" + s[i:]
 
             return s
 
@@ -183,6 +195,7 @@ class __MyPyIPython:
             if self.mypy_typecheck:
                 import traceback
                 import functools
+                import sys
 
                 try:
                     from mypy import api
@@ -201,9 +214,11 @@ class __MyPyIPython:
                     try:
                         cell_p = ast.parse(cell_filter)
                     except SyntaxError as e:
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+                        traceback.print_exception(exc_type, exc_value, exc_traceback,limit=0)
                         # logger.exception("SyntaxError")
-                        # return ExecutionResult(e)
-                        return mypy_tmp_func(cell, *args, **kwargs)
+                        return ExecutionResult(e)
+                    
                     getCell = NamesLister()
                     getCell.visit(cell_p)
                     newnames = getCell.names
