@@ -32,6 +32,7 @@ class Names(ast.NodeVisitor):
     """Gather the names of variables of Names and Tuple nodes.
     Specifically do not gather names from Attribute or Subscripts
     (which are also possible as an assign target)"""
+
     def __init__(self, replace=False):
         self.names = set()
         self.replace = replace
@@ -56,6 +57,7 @@ class NamesLister(ast.NodeVisitor):
     """Gather the names of all assigned variables, classes and functions.
     If replace is true, it will also gather assigned variables which have
     subscripts or attributes."""
+
     def __init__(self, replace=False):
         self.names = set()
         self.replace = replace
@@ -89,23 +91,28 @@ class NamesLister(ast.NodeVisitor):
 class Replacer(ast.NodeTransformer):
     """Replace all functions, classes and variable declarations
        with a Pass node, which are present in a list of names."""
+
     def __init__(self, known):
         """Intialize the Replacer.
 
         known -- The set of names which should be replaced.
         """
         self.known = known
-
+    
+    # If the function is redefined, replace it was pass.
+    # If it is not, we don't need the body anymore.
     def visit_FunctionDef(self, node):
         if node.name in self.known:
             return ast.Pass()
         else:
+            node.body = [ast.Pass()]
             return node
 
     def visit_AsyncFunctionDef(self, node):
         if node.name in self.known:
             return ast.Pass()
         else:
+            node.body = [ast.Pass()]
             return node
 
     def visit_ClassDef(self, node):
@@ -138,12 +145,24 @@ class Replacer(ast.NodeTransformer):
                 return ast.Pass()
         return node
 
+    # This visiter removes all top level expressions and passses,
+    # thus cleaning up the AST of unnecessary history.
+    def visit_Module(self, node):
+        res = []
+        for n in node.body:
+            if not (isinstance(n, ast.Pass)
+                    or isinstance(n, ast.Expr)
+                    ):
+                res.append(n)
+        node.body = res
+        return ast.NodeTransformer.generic_visit(self, node)
+
 
 class __MyPyIPython:
     """An type checker for iPython, that uses MyPy."""
 
     def __init__(self):
-        self.mypy_cells : str = ""
+        self.mypy_cells: str = ""
         self.mypy_names = set()
         mypy_shell = get_ipython()
         mypy_tmp_func = mypy_shell.run_cell
@@ -161,7 +180,6 @@ class __MyPyIPython:
 
             return i
 
-
         def commentMagic(s: str) -> str:
             """Comments out specific iPython things,
             which are not valid python, such as line magic,
@@ -178,14 +196,14 @@ class __MyPyIPython:
 
             return s
 
-        def fixLineNr(s : str, offset : int) -> str:
+        def fixLineNr(s: str, offset: int) -> str:
             compiled = re.compile('(.*)(line\\s)([0-9]+)(.*)').findall(s)
             if(len(compiled) == 0):
                 return s
-            begin,line,nr,end = compiled[0]
+            begin, line, nr, end = compiled[0]
             begin = fixLineNr(begin, offset)
-            end   = fixLineNr(end, offset)
-            nr    = int(nr) - offset
+            end = fixLineNr(end, offset)
+            nr = int(nr) - offset
 
             return begin + line + str(nr) + end
 
@@ -193,16 +211,15 @@ class __MyPyIPython:
             """Function that applies typechecking, and afterwards
             calls the normal function of the cell"""
             if self.mypy_typecheck:
-                import traceback
-                import functools
-                import sys
+                syntaxError = False
 
                 try:
                     from mypy import api
                     import astor
                     from IPython.core.interactiveshell import ExecutionResult
+                    import functools
 
-                    #If we are cell magic, we don't have to type check
+                    # If we are cell magic, we don't have to type check
                     if(cell.startswith("%%")):
                         return mypy_tmp_func(cell, *args, **kwargs)
 
@@ -213,11 +230,11 @@ class __MyPyIPython:
                     cell_p = None
                     try:
                         cell_p = ast.parse(cell_filter)
-                    except SyntaxError as e:
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
-                        traceback.print_exception(exc_type, exc_value, exc_traceback,limit=0)
-                        # logger.exception("SyntaxError")
-                        return ExecutionResult(e)
+                    except SyntaxError:
+                        syntaxError = True
+
+                    if syntaxError:
+                        return mypy_tmp_func(cell, *args, **kwargs)
 
                     getCell = NamesLister()
                     getCell.visit(cell_p)
@@ -230,7 +247,8 @@ class __MyPyIPython:
                             if self.debug:
                                 logger.debug(self.mypy_cells)
                             return mypy_tmp_func(cell, *args, **kwargs)
-                        new_mypy_cells_ast = Replacer(remove).visit(mypy_cells_ast)
+                        new_mypy_cells_ast = Replacer(
+                            remove).visit(mypy_cells_ast)
                         self.mypy_cells = astor.to_source(new_mypy_cells_ast)
 
                     self.mypy_names.update(newnames)
@@ -244,7 +262,8 @@ class __MyPyIPython:
                         ['--ignore-missing-imports', '--allow-redefinition', '-c', self.mypy_cells])
                     if mypy_result[0]:
                         for line in mypy_result[0].strip().split('\n'):
-                            compiled = re.compile('(<[a-z]+>:)(\\d+)(.*?)$').findall(line)
+                            compiled = re.compile(
+                                '(<[a-z]+>:)(\\d+)(.*?)$').findall(line)
                             if len(compiled) > 0:
                                 l, n, r = compiled[0]
                                 if int(n) > mypy_cells_length:
@@ -256,7 +275,8 @@ class __MyPyIPython:
                         logger.error(mypy_result[1])
 
                 except Exception:
-                    logger.critical("Error in typechecker, you can turn it off with '%turnOffTyCheck'")
+                    logger.critical(
+                        "Error in typechecker, you can turn it off with '%turnOffTyCheck'")
                     if self.debug:
                         logger.exception("Fatal error: please report")
 
@@ -267,7 +287,8 @@ class __MyPyIPython:
     def state(self):
         on_off = {True: 'On', False: 'Off'}
         debug_on_off = {True: 'DebugOn', False: 'DebugOff'}
-        logger.info(f"nb_mypy state: {on_off[self.mypy_typecheck]} {debug_on_off[self.debug]}")
+        logger.info(
+            f"nb_mypy state: {on_off[self.mypy_typecheck]} {debug_on_off[self.debug]}")
 
     def stop(self):
         self.mypy_typecheck = False
@@ -281,31 +302,8 @@ class __MyPyIPython:
     def debugOff(self):
         self.debug = False
 
+
 __TypeChecker = __MyPyIPython()
-
-
-@register_line_magic
-def turnOffTyCheck(line):
-    "Turned off type checker"
-    __TypeChecker.stop()
-
-
-@register_line_magic
-def turnOnTyCheck(line):
-    "Turned on type checker"
-    __TypeChecker.start()
-
-
-@register_line_magic
-def turnOnTyDebug(line):
-    "Turned on type checker"
-    __TypeChecker.debugOn()
-
-
-@register_line_magic
-def turnOffTyDebug(line):
-    "Turned on type checker"
-    __TypeChecker.debugOff()
 
 
 @register_line_magic
@@ -320,8 +318,9 @@ def nb_mypy(line):
         'DebugOff': __TypeChecker.debugOff,
     }
     # logger.info(f"line magic argument: {line!r}")
-    unknown = lambda: logger.error(f"nb_mypy: Unknown argument\nValid arguments: {list(switcher.keys())!r}")
-    switcher.get(line,unknown)()
+    def unknown(): return logger.error(
+        f"nb_mypy: Unknown argument\nValid arguments: {list(switcher.keys())!r}")
+    switcher.get(line, unknown)()
 
 
 logger.info(f"typecheck.py version {__version__}")
