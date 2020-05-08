@@ -13,7 +13,7 @@ Current version was inspired by github user BradyHu
 https://gist.github.com/BradyHu/f4dc997d4b53f9b23e1120940fb8f0d1
 """
 
-__version__ = '2020.4.1'
+__version__ = '2020.5.8'
 
 import ast
 import re
@@ -98,9 +98,7 @@ class Replacer(ast.NodeTransformer):
         known -- The set of names which should be replaced.
         """
         self.known = known
-    
-    # If the function is redefined, replace it was pass.
-    # If it is not, we don't need the body anymore.
+
     def visit_FunctionDef(self, node):
         if node.name in self.known:
             return ast.Pass()
@@ -162,7 +160,7 @@ class __MyPyIPython:
     """An type checker for iPython, that uses MyPy."""
 
     def __init__(self):
-        self.mypy_cells: str = ""
+        self.mypy_cells: str = "from IPython.core.getipython import get_ipython\n"
         self.mypy_names = set()
         mypy_shell = get_ipython()
         mypy_tmp_func = mypy_shell.run_cell
@@ -210,6 +208,7 @@ class __MyPyIPython:
         def mypy_tmp(cell, *args, **kwargs):
             """Function that applies typechecking, and afterwards
             calls the normal function of the cell"""
+            result = mypy_tmp_func(cell, *args, **kwargs)
             if self.mypy_typecheck:
                 syntaxError = False
 
@@ -221,7 +220,7 @@ class __MyPyIPython:
 
                     # If we are cell magic, we don't have to type check
                     if(cell.startswith("%%")):
-                        return mypy_tmp_func(cell, *args, **kwargs)
+                        return result
 
                     # Filter ipython related stuff
                     # We just comment it, since we still need the line numbers to match
@@ -234,7 +233,7 @@ class __MyPyIPython:
                         syntaxError = True
 
                     if syntaxError:
-                        return mypy_tmp_func(cell, *args, **kwargs)
+                        return result
 
                     getCell = NamesLister()
                     getCell.visit(cell_p)
@@ -246,7 +245,7 @@ class __MyPyIPython:
                         except SyntaxError:
                             if self.debug:
                                 logger.debug(self.mypy_cells)
-                            return mypy_tmp_func(cell, *args, **kwargs)
+                            return result
                         new_mypy_cells_ast = Replacer(
                             remove).visit(mypy_cells_ast)
                         self.mypy_cells = astor.to_source(new_mypy_cells_ast)
@@ -280,7 +279,7 @@ class __MyPyIPython:
                     if self.debug:
                         logger.exception("Fatal error: please report")
 
-            return mypy_tmp_func(cell, *args, **kwargs)
+            return result
 
         mypy_shell.run_cell = mypy_tmp
 
