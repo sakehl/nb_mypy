@@ -1,19 +1,19 @@
 #! /usr/bin python3
 # -*- coding:utf-8 -*-
 """
-Add mypy type-checking to jupyter/ipython, which respects history.
+Add Mypy type-checking to jupyter/ipython, which respects history.
 Save this script to your ipython profile's startup directory
-and the jupyter/ipython shell will do typecheck automatically.
+and the Jupyter/IPython kernel will automatically do type checking.
 
-Ipython profile directory can be found via `ipython locate [profile]`
+The IPython profile directory can be found via `ipython locate`.
 For example, this file could exist on a path like this on linux:
-/home/yourusername/.ipython/profile_default/startup/typecheck.py
+/home/yourusername/.ipython/profile_default/startup/nb_mypy.py
 
 Current version was inspired by github user BradyHu
 https://gist.github.com/BradyHu/f4dc997d4b53f9b23e1120940fb8f0d1
 """
 
-__version__ = '2020.5.8'
+__version__ = '2020.5.9'
 
 import ast
 import re
@@ -27,12 +27,14 @@ logger = logging.getLogger(__name__)
 
 
 # List names in names objects, or tuples.
-# The only two options which can be assigned to
-# Thus to be used in an assignmed
+# The only two options which can be assigned to.
+# Thus to be used in an assignment.
 class Names(ast.NodeVisitor):
     """Gather the names of variables of Names and Tuple nodes.
+
     Specifically do not gather names from Attribute or Subscripts
-    (which are also possible as an assign target)"""
+    (which are also possible as an assign target).
+    """
 
     def __init__(self, replace=False):
         self.names = set()
@@ -56,8 +58,10 @@ class Names(ast.NodeVisitor):
 
 class NamesLister(ast.NodeVisitor):
     """Gather the names of all assigned variables, classes and functions.
-    If replace is true, it will also gather assigned variables which have
-    subscripts or attributes."""
+
+    If replace is True, it will also gather assigned variables which have
+    subscripts or attributes.
+    """
 
     def __init__(self, replace: bool = False):
         self.var_names = set()
@@ -93,10 +97,11 @@ class NamesLister(ast.NodeVisitor):
 
 class Replacer(ast.NodeTransformer):
     """Replace all functions, classes and variable declarations
-       with a Pass node, which are present in a list of names."""
+       with a Pass node, which are present in a list of names.
+       """
 
     def __init__(self, known_vars: Set[str], known_annotated: Set[str], known_classfunc: Set[str]):
-        """Intialize the Replacer.
+        """Initialize the Replacer.
 
         known -- The set of names which should be replaced.
         """
@@ -108,7 +113,7 @@ class Replacer(ast.NodeTransformer):
         if node.name in self.known_classfunc:
             return ast.Pass()
         else:
-            # Remove the body of the function, we don't have to typecheck it anymore
+            # Remove the body of the function, we don't have to type check it anymore
             node.body = [ast.Pass()]
             return node
 
@@ -149,9 +154,10 @@ class Replacer(ast.NodeTransformer):
                 return ast.Pass()
         return node
 
-    # This visiter removes all top level expressions and passses,
-    # thus cleaning up the AST of unnecessary history.
     def visit_Module(self, node):
+        """Remove all top level expressions and `pass`es,
+        thus cleaning up the AST of unnecessary history.
+        """
         res = []
         for n in node.body:
             if not (isinstance(n, ast.Pass)
@@ -162,22 +168,25 @@ class Replacer(ast.NodeTransformer):
         return ast.NodeTransformer.generic_visit(self, node)
 
 
-class __MyPyIPython:
-    """An type checker for iPython, that uses MyPy."""
+class __MypyIPython:
+    """A type checker for IPython, that uses Mypy.
+    """
 
-    def __init__(self):
+    def __init__(self, mypy_typecheck):
         self.mypy_cells: str = "from IPython.core.getipython import get_ipython\n"
         self.mypy_var_names = set()
         self.mypy_annotated_names = set()
         self.mypy_classfunc_names = set()
         mypy_shell = get_ipython()
         mypy_tmp_func = mypy_shell.run_cell
-        self.mypy_typecheck = False
+        self.mypy_typecheck = mypy_typecheck
         self.debug = False
 
         def first_none_whitspace(s: str) -> int:
-            "Get the index of the first non whitespace char."
+            """Get the index of the first non-whitespace char.
+            """
             i = 0
+
             for c in s:
                 if c.isspace():
                     i += 1
@@ -214,8 +223,9 @@ class __MyPyIPython:
             return begin + line + str(nr) + end
 
         def mypy_tmp(cell, *args, **kwargs):
-            """Function that applies typechecking, and afterwards
-            calls the normal function of the cell"""
+            """Function that applies type checking, and afterwards
+            calls the normal function of the cell.
+            """
             result = mypy_tmp_func(cell, *args, **kwargs)
             if self.mypy_typecheck:
                 syntaxError = False
@@ -227,7 +237,7 @@ class __MyPyIPython:
                     import functools
 
                     # If we are cell magic, we don't have to type check
-                    if(cell.startswith("%%")):
+                    if cell.startswith("%%"):
                         return result
 
                     # Filter ipython related stuff
@@ -304,7 +314,7 @@ class __MyPyIPython:
 
                 except Exception:
                     logger.critical(
-                        "Error in typechecker, you can turn it off with '%turnOffTyCheck'")
+                        "Error in type checker, you can turn it off with '%nb_mypy Off'")
                     if self.debug:
                         logger.exception("Fatal error: please report")
 
@@ -313,25 +323,34 @@ class __MyPyIPython:
         mypy_shell.run_cell = mypy_tmp
 
     def state(self):
+        """Show current state.
+        """
         on_off = {True: 'On', False: 'Off'}
         debug_on_off = {True: 'DebugOn', False: 'DebugOff'}
-        logger.info(
-            f"nb_mypy state: {on_off[self.mypy_typecheck]} {debug_on_off[self.debug]}")
+        logger.info(f"nb_mypy state: {on_off[self.mypy_typecheck]} {debug_on_off[self.debug]}")
 
     def stop(self):
+        """Disable automatic type checking.
+        """
         self.mypy_typecheck = False
 
     def start(self):
+        """Enable automatic type checking.
+        """
         self.mypy_typecheck = True
 
-    def debugOn(self):
+    def debug_on(self):
+        """Enable debug mode.
+        """
         self.debug = True
 
-    def debugOff(self):
+    def debug_off(self):
+        """Disable debug mode.
+        """
         self.debug = False
 
 
-__TypeChecker = __MyPyIPython()
+__Nb_Mypy_TypeChecker = __MypyIPython(False)
 
 
 @register_line_magic
@@ -339,16 +358,18 @@ def nb_mypy(line):
     """Inspect or modify mypy autochecking state.
     """
     switcher = {
-        '': __TypeChecker.state,
-        'On': __TypeChecker.start,
-        'Off': __TypeChecker.stop,
-        'DebugOn': __TypeChecker.debugOn,
-        'DebugOff': __TypeChecker.debugOff,
+        '': __Nb_Mypy_TypeChecker.state,
+        'On': __Nb_Mypy_TypeChecker.start,
+        'Off': __Nb_Mypy_TypeChecker.stop,
+        'DebugOn': __Nb_Mypy_TypeChecker.debug_on,
+        'DebugOff': __Nb_Mypy_TypeChecker.debug_off,
     }
     # logger.info(f"line magic argument: {line!r}")
-    def unknown(): return logger.error(
-        f"nb_mypy: Unknown argument\nValid arguments: {list(switcher.keys())!r}")
+
+    def unknown():
+        logger.error(f"nb_mypy: Unknown argument\nValid arguments: {list(switcher.keys())!r}")
+
     switcher.get(line, unknown)()
 
 
-logger.info(f"typecheck.py version {__version__}")
+logger.info(f"nb-mypy.py version {__version__}")
