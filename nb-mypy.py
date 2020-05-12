@@ -13,7 +13,7 @@ Current version was inspired by github user BradyHu
 https://gist.github.com/BradyHu/f4dc997d4b53f9b23e1120940fb8f0d1
 """
 
-__version__ = '2020.5.9'
+__version__ = '2020.5.10'
 
 import ast
 import re
@@ -23,7 +23,7 @@ import logging
 from typing import Set
 
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('nb-mypy')
 
 
 # List names in names objects, or tuples.
@@ -322,12 +322,17 @@ class __MypyIPython:
 
         mypy_shell.run_cell = mypy_tmp
 
+    def version(self):
+        """Show version.
+        """
+        logger.info(f"Version {__version__}")
+
     def state(self):
         """Show current state.
         """
         on_off = {True: 'On', False: 'Off'}
         debug_on_off = {True: 'DebugOn', False: 'DebugOff'}
-        logger.info(f"nb_mypy state: {on_off[self.mypy_typecheck]} {debug_on_off[self.debug]}")
+        logger.info(f"State: {on_off[self.mypy_typecheck]} {debug_on_off[self.debug]}")
 
     def stop(self):
         """Disable automatic type checking.
@@ -359,6 +364,7 @@ def nb_mypy(line):
     """
     switcher = {
         '': __Nb_Mypy_TypeChecker.state,
+        '-v': __Nb_Mypy_TypeChecker.version,
         'On': __Nb_Mypy_TypeChecker.start,
         'Off': __Nb_Mypy_TypeChecker.stop,
         'DebugOn': __Nb_Mypy_TypeChecker.debug_on,
@@ -367,9 +373,9 @@ def nb_mypy(line):
     # logger.info(f"line magic argument: {line!r}")
 
     def unknown():
-        logger.error(f"nb_mypy: Unknown argument\nValid arguments: {list(switcher.keys())!r}")
+        logger.error(f"Unknown argument\nValid arguments: {list(switcher.keys())!r}")
 
     switcher.get(line, unknown)()
 
 
-logger.info(f"nb-mypy.py version {__version__}")
+__Nb_Mypy_TypeChecker.version()

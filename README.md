@@ -5,7 +5,7 @@
 
 ## Installation
 
-* Move the `nb-mypy.py` script into your IPython profile's startup directory.
+* Download the [`nb-mypy.py`](nb-mypy.py) script and move it into your IPython profile's startup directory.
 
   The IPython directory can be found by running `ipython locate` in a terminal.
   Within this directory, the default profile's startup directory is `profile_default/startup/`.
@@ -42,6 +42,7 @@ if 'nb_mypy' in get_ipython().magics_manager.magics.get('line'):
     %nb_mypy On
 ```
 Here are the ways to use the line magic `%nb_mypy`
+* `%nb_mypy -v`: show version
 * `%nb_mypy`: show the current state
 * `%nb_mypy On`: enable automatic type checking
 * `%nb_mypy Off`: disable automatic type checking
@@ -51,5 +52,4 @@ Here are the ways to use the line magic `%nb_mypy`
 
 ## Examples
 
-(Example notebook to be provided.
-See Lecture 4-B of Software Development for Engineers.)
+For examples, see the Jupyter notebook [`Nb-Mypy.ipynb`](Nb-Mypy.ipynb).
