@@ -13,7 +13,7 @@ Current version was inspired by github user BradyHu
 https://gist.github.com/BradyHu/f4dc997d4b53f9b23e1120940fb8f0d1
 """
 
-__version__ = '2020.5.10'
+__version__ = '2020.6.0'
 
 import ast
 import re
@@ -22,9 +22,12 @@ from IPython.core.magic import register_line_magic
 import logging
 from typing import Set
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('nb-mypy')
-
+logger.setLevel(logging.DEBUG)
+sh = logging.StreamHandler()
+sh.setLevel(logging.DEBUG)
+sh.setFormatter(logging.Formatter(fmt=logging.BASIC_FORMAT))
+logger.addHandler(sh)
 
 # List names in names objects, or tuples.
 # The only two options which can be assigned to.
