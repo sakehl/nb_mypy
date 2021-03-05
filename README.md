@@ -1,14 +1,34 @@
 # Nb Mypy
 
-_Nb Mypy_ is a facility to automatically run `mypy` on Jupyter notebook cells as they are executed, whilst retaining information about the execution history.
+_Nb Mypy_ is a facility to automatically run `mypy`[http://mypy-lang.org/] on Jupyter notebook cells as they are executed, whilst retaining information about the execution history.
 
 
 ## Installation
 
-* _Nb Mypy_ relies on the packages mypy and astor, which you can install via `python3 -m pip install mypy astor`. 
-* _Nb Mypy_ can be installed with `python3 -m pip install nb_mypy`. 
+* _Nb Mypy_ relies on the packages mypy and astor, which you can install like this:
+```
+python3 -m pip install mypy astor
+```
+* _Nb Mypy_ can be installed like:
+```
+python3 -m pip install nb_mypy
+```
 
 Once installed, you can load it via `%load_ext nb_mypy` in a cell of  a Jupyter notebook using the IPython kernel.
+
+### Installation from source
+The package is build via PyPA's `build`, make sure you have the latest available via 
+```
+python3 -m pip install --upgrade build
+```
+
+
+You can then build the package using `python3 -m build` from the current directory where `pyproject.toml` is located.
+
+Now you can install it using 
+```
+python -m pip install --no-index --find-links=./dist nb_mypy
+```
 
 ## Usage
 
@@ -18,7 +38,7 @@ you can load this extension to do type checking by executing
 (in a code cell) the line magic `%load_ext nb_mypy`.
 
 With the line magic `%nb_mypy` you can modify the behaviour of _Nb Mypy_
-```
+
 Here are the ways to use the line magic `%nb_mypy`
 * `%nb_mypy -v`: show version
 * `%nb_mypy`: show the current state
