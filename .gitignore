@@ -2,3 +2,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 .mypy_cache/
+
+.ipynb_checkpoints/
+build/
+env/
+nb_mypy.egg-info/

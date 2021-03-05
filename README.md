@@ -1,45 +1,23 @@
-# Nb-Mypy
+# Nb Mypy
 
-`Nb-Mypy` is a facility to automatically run `mypy` on Jupyter notebook cells as they are executed.
+_Nb Mypy_ is a facility to automatically run `mypy` on Jupyter notebook cells as they are executed, whilst retaining information about the execution history.
 
 
 ## Installation
 
-* Download the [`nb-mypy.py`](nb-mypy.py) script and move it into your IPython profile's startup directory.
+* _Nb Mypy_ relies on the packages mypy and astor, which you can install via `python3 -m pip install mypy astor`. 
+* _Nb Mypy_ can be installed with `python3 -m pip install nb_mypy`. 
 
-  The IPython directory can be found by running `ipython locate` in a terminal.
-  Within this directory, the default profile's startup directory is `profile_default/startup/`.
-  
-  For example, on Linux the script could exist on a path like this:
-```shell script
-/yourhomedir/.ipython/profile_default/startup/nb-mypy.py
-```
-
-* This script relies on `mypy` and `astor`.
-  So, make sure to have them installed. E.g.
-
-```shell script
-$ pip3 install mypy astor
-```
-Once installed, the `%nb_mypy` line magic becomes available in Jupyter notebooks using the IPython kernel.
-You will need to restart your kernel after installing or updating `nb-mypy.py`.
-At startup, automatic type checking is _disabled_.
-
-> If you want it to be _enabled_ at startup, then make the following change in `nb-mypy.py`.
-> Change `__Nb_Mypy_TypeChecker = __MypyIPython(False)` into
-> `__Nb_Mypy_TypeChecker = __MypyIPython(True)`.
+Once installed, you can load it via `%load_ext nb_mypy` in a cell of  a Jupyter notebook using the IPython kernel.
 
 ## Usage
 
 In Jupyter notebooks where you want to apply
 automatic type checking,
-you can enable type checking by executing
-(in a code cell) the line magic `%nb_mypy On`.
+you can load this extension to do type checking by executing
+(in a code cell) the line magic `%load_ext nb_mypy`.
 
-A robust way of attempting to enable type checking is
-```python
-if 'nb_mypy' in get_ipython().magics_manager.magics.get('line'):
-    %nb_mypy On
+With the line magic `%nb_mypy` you can modify the behaviour of _Nb Mypy_
 ```
 Here are the ways to use the line magic `%nb_mypy`
 * `%nb_mypy -v`: show version
@@ -52,4 +30,4 @@ Here are the ways to use the line magic `%nb_mypy`
 
 ## Examples
 
-For examples, see the Jupyter notebook [`Nb-Mypy.ipynb`](Nb-Mypy.ipynb).
+For examples, see the Jupyter notebook [`Nb_Mypy.ipynb`](Nb_Mypy.ipynb).
