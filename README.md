@@ -5,10 +5,7 @@ _Nb Mypy_ is a facility to automatically run [`mypy`](http://mypy-lang.org/) on 
 
 ## Installation
 
-* _Nb Mypy_ relies on the packages mypy and astor, which you can install like this:
-```bash
-python3 -m pip install mypy astor
-```
+* _Nb Mypy_ relies on the packages mypy and astor, but those should be automatically installed.
 * _Nb Mypy_ can be installed like:
 ```bash
 python3 -m pip install nb_mypy
