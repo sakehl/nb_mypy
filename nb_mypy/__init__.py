@@ -13,7 +13,6 @@ Current version was inspired by github user BradyHu
 https://gist.github.com/BradyHu/f4dc997d4b53f9b23e1120940fb8f0d1
 """
 
-__version__ = '1.0.0'
 
 import ast
 import functools
@@ -26,8 +25,17 @@ from mypy import api
 import IPython  # type: ignore
 from IPython.core.magic import register_line_magic  # type: ignore
 
-# List names in names objects, or tuples.
-#
+from nb_mypy.version import __version__
+
+
+class RevealRemover(ast.NodeTransformer):
+    """Removes function calls to 'reveal_type'."""
+
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name):
+            if node.func.id == 'reveal_type':
+                return ast.Constant(None)
+        return node
 
 
 class Names(ast.NodeVisitor):
@@ -385,6 +393,9 @@ def load_ipython_extension(ipython_shell: IPython.core.interactiveshell.Interact
     __NB_TYPECHECKER.version()
     ipython_shell.events.register(
         'pre_run_cell', __NB_TYPECHECKER.type_check)
+
+    reveal_remover = RevealRemover()
+    ipython_shell.ast_transformers.append(reveal_remover)
 
     @register_line_magic
     def nb_mypy(line):

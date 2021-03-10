@@ -1,6 +1,6 @@
 # Nb Mypy
 
-_Nb Mypy_ is a facility to automatically run `mypy`[http://mypy-lang.org/] on Jupyter notebook cells as they are executed, whilst retaining information about the execution history.
+_Nb Mypy_ is a facility to automatically run [`mypy`](http://mypy-lang.org/) on Jupyter notebook cells as they are executed, whilst retaining information about the execution history.
 
 
 ## Installation
@@ -21,7 +21,6 @@ The package is build via PyPA's `build`, make sure you have the latest available
 ```bash
 python3 -m pip install --upgrade build
 ```
-
 
 You can then build the package from the current directory where `pyproject.toml` is located:
 ```bash
@@ -53,4 +52,4 @@ Here are the ways to use the line magic `%nb_mypy`
 
 ## Examples
 
-For examples, see the Jupyter notebook [`Nb_Mypy.ipynb`](Nb_Mypy.ipynb).
+For examples, see the Jupyter notebook [`Nb_Mypy.ipynb`](https://gitlab.tue.nl/jupyter-projects/nb_mypy/-/blob/master/Nb_Mypy.ipynb).
