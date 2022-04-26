@@ -18,7 +18,7 @@ import ast
 import functools
 import logging
 import re
-from typing import Set, Optional
+from typing import Optional, Set
 
 import astor  # type: ignore
 from mypy import api
@@ -31,7 +31,7 @@ from nb_mypy.version import __version__
 class RevealRemover(ast.NodeTransformer):
     """Removes function calls to 'reveal_type'."""
 
-    def visit_Call(self, node):
+    def visit_Call(self, node: ast.Call) -> ast.AST:
         if isinstance(node.func, ast.Name):
             if node.func.id == 'reveal_type':
                 return ast.Constant(None)
@@ -46,23 +46,23 @@ class Names(ast.NodeVisitor):
     also possible as an assign target) if replace is True.
     """
 
-    def __init__(self, replace=False):
-        self.names = set()
+    def __init__(self, replace:bool =False) -> None:
+        self.names: Set[str] = set()
         self.replace = replace
 
-    def visit_Name(self, node):
+    def visit_Name(self, node: ast.Name) -> None:
         self.names.add(str(node.id))
 
     # Unsure why this was here again, maybe remove?
-    def visit_Tuple(self, node):
+    def visit_Tuple(self, node: ast.Tuple) -> None:
         for e in node.elts:
             self.visit(e)
 
-    def visit_Attribute(self, node):
+    def visit_Attribute(self, node: ast.Attribute) -> None:
         if self.replace:
             self.visit(node.value)
 
-    def visit_Subscript(self, node):
+    def visit_Subscript(self, node: ast.Subscript) -> None:
         if self.replace:
             self.visit(node.value)
 
@@ -80,27 +80,27 @@ class NamesLister(ast.NodeVisitor):
         self.classfunc_names: Set[str] = set()
         self.replace = replace
 
-    def visit_FunctionDef(self, node):
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self.classfunc_names.add(node.name)
 
-    def visit_AsyncFunctionDef(self, node):
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
         self.classfunc_names.add(node.name)
 
-    def visit_ClassDef(self, node):
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
         self.classfunc_names.add(node.name)
 
-    def visit_Assign(self, node):
+    def visit_Assign(self, node: ast.Assign) -> None:
         namer = Names(self.replace)
         for target in node.targets:
             namer.visit(target)
         self.var_names.update(namer.names)
 
-    def visit_AnnAssign(self, node):
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         namer = Names(self.replace)
         namer.visit(node.target)
         self.annotated_names.update(namer.names)
 
-    def visit_AugAssign(self, node):
+    def visit_AugAssign(self, node: ast.AugAssign) -> None:
         namer = Names(self.replace)
         namer.visit(node.target)
         self.var_names.update(namer.names)
@@ -111,7 +111,7 @@ class Replacer(ast.NodeTransformer):
     with a Pass node, which are present in a list of names.
     """
 
-    def __init__(self, known_vars: Set[str], known_annotated: Set[str], known_classfunc: Set[str]):
+    def __init__(self, known_vars: Set[str], known_annotated: Set[str], known_classfunc: Set[str]) -> None:
         """Initialize the Replacer.
 
         known_vars, known_annotated, known_classfunc-- The set of names which should be replaced.
@@ -120,7 +120,7 @@ class Replacer(ast.NodeTransformer):
         self.known_annotated = known_annotated
         self.known_classfunc = known_classfunc
 
-    def visit_FunctionDef(self, node):
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
         if node.name in self.known_classfunc:
             return ast.Pass()
 
@@ -128,20 +128,20 @@ class Replacer(ast.NodeTransformer):
         node.body = [ast.Pass()]
         return node
 
-    def visit_AsyncFunctionDef(self, node):
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST:
         if node.name in self.known_classfunc:
             return ast.Pass()
 
         node.body = [ast.Pass()]
         return node
 
-    def visit_ClassDef(self, node):
+    def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST:
         if node.name in self.known_classfunc:
             return ast.Pass()
 
         return node
 
-    def visit_Assign(self, node):
+    def visit_Assign(self, node: ast.Assign) -> ast.AST:
         mynames = NamesLister(True)
         mynames.visit(node)
         for name in mynames.var_names:
@@ -149,7 +149,7 @@ class Replacer(ast.NodeTransformer):
                 return ast.Pass()
         return node
 
-    def visit_AugAssign(self, node):
+    def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST:
         mynames = NamesLister(True)
         mynames.visit(node)
         for name in mynames.var_names:
@@ -157,7 +157,7 @@ class Replacer(ast.NodeTransformer):
                 return ast.Pass()
         return node
 
-    def visit_AnnAssign(self, node):
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> ast.AST:
         mynames = NamesLister(True)
         mynames.visit(node)
         for name in mynames.annotated_names:
@@ -165,7 +165,7 @@ class Replacer(ast.NodeTransformer):
                 return ast.Pass()
         return node
 
-    def visit_Module(self, node):
+    def visit_Module(self, node: ast.Module) -> ast.AST:
         """Remove all top level expressions and `pass`es,
         thus cleaning up the AST of unnecessary history.
         """
@@ -214,12 +214,13 @@ def fix_line_nr(line: str, offset: int) -> str:
     compiled = re.compile('(.*)(line\\s)([0-9]+)(.*)').findall(line)
     if len(compiled) == 0:
         return line
+    begin: str; number: str; end: str
     begin, line, number, end = compiled[0]
     begin = fix_line_nr(begin, offset)
     end = fix_line_nr(end, offset)
-    number = int(number) - offset
+    number = str(int(number) - offset)
 
-    return begin + line + str(number) + end
+    return begin + line + number + end
 
 
 class MypyIPython:
@@ -234,6 +235,7 @@ class MypyIPython:
 
         self.mypy_typecheck: bool = True
         self.debug: bool = False
+        self.config_file: Optional[str] = None
 
         self.logger = logging.getLogger('nb-mypy')
         self.logger.setLevel(logging.DEBUG)
@@ -311,7 +313,7 @@ class MypyIPython:
                 self.logger.debug(
                     "Error was fatal: please report it\n%s", excep)
 
-    def clean_history(self, new_var, new_annotated, new_classfunc) -> None:
+    def clean_history(self, new_var: Set[str], new_annotated: Set[str], new_classfunc: Set[str]) -> None:
         """Clean the history of any re-definitions of variables, classes or functions."""
         # Remove if there is a new (annotated) variable or a new function
         remove_var = (new_var | new_annotated |
@@ -348,12 +350,12 @@ class MypyIPython:
             remove_classfunc)
         self.mypy_classfunc_names.update(new_classfunc)
 
-    def version(self):
+    def version(self) -> None:
         """Show version.
         """
         self.logger.info("Version %s", __version__)
 
-    def state(self):
+    def state(self) -> None:
         """Show current state.
         """
         on_off = {True: 'On', False: 'Off'}
@@ -361,22 +363,22 @@ class MypyIPython:
         self.logger.info(
             "State: %s %s", on_off[self.mypy_typecheck], debug_on_off[self.debug])
 
-    def stop(self):
+    def stop(self) -> None:
         """Disable automatic type checking.
         """
         self.mypy_typecheck = False
 
-    def start(self):
+    def start(self) -> None:
         """Enable automatic type checking.
         """
         self.mypy_typecheck = True
 
-    def debug_on(self):
+    def debug_on(self) -> None:
         """Enable debug mode.
         """
         self.debug = True
 
-    def debug_off(self):
+    def debug_off(self) -> None:
         """Disable debug mode.
         """
         self.debug = False
@@ -384,8 +386,7 @@ class MypyIPython:
 
 __NB_TYPECHECKER: Optional[MypyIPython] = None
 
-
-def load_ipython_extension(ipython_shell: IPython.core.interactiveshell.InteractiveShell):
+def load_ipython_extension(ipython_shell: IPython.core.interactiveshell.InteractiveShell) -> None:
     """Load the nb-mypy extension."""
 
     global __NB_TYPECHECKER
@@ -397,28 +398,32 @@ def load_ipython_extension(ipython_shell: IPython.core.interactiveshell.Interact
     reveal_remover = RevealRemover()
     ipython_shell.ast_transformers.append(reveal_remover)
 
-    @register_line_magic
-    def nb_mypy(line):
+    @register_line_magic # type: ignore
+    def nb_mypy(line: str) -> None:
         """Inspect or modify mypy autochecking state.
         """
         global __NB_TYPECHECKER
-        switcher = {
-            '': __NB_TYPECHECKER.state,
-            '-v': __NB_TYPECHECKER.version,
-            'On': __NB_TYPECHECKER.start,
-            'Off': __NB_TYPECHECKER.stop,
-            'DebugOn': __NB_TYPECHECKER.debug_on,
-            'DebugOff': __NB_TYPECHECKER.debug_off,
-        }
+        if __NB_TYPECHECKER is not None:
+            
 
-        def unknown():
-            __NB_TYPECHECKER.logger.error(
-                "Unknown argument\n Valid arguments: %s", list(switcher.keys()))
+            switcher = {
+                '': __NB_TYPECHECKER.state,
+                '-v': __NB_TYPECHECKER.version,
+                'On': __NB_TYPECHECKER.start,
+                'Off': __NB_TYPECHECKER.stop,
+                'DebugOn': __NB_TYPECHECKER.debug_on,
+                'DebugOff': __NB_TYPECHECKER.debug_off,
+            }
 
-        switcher.get(line, unknown)()
+            def unknown() -> None:
+                if __NB_TYPECHECKER is not None:
+                    __NB_TYPECHECKER.logger.error(
+                        "Unknown argument\n Valid arguments: %s", list(switcher.keys()))
+
+            switcher.get(line, unknown)()
 
 
-def unload_ipython_extension(ipython_shell: IPython.core.interactiveshell.InteractiveShell):
+def unload_ipython_extension(ipython_shell: IPython.core.interactiveshell.InteractiveShell) -> None:
     """Unload the nb-mypy extension."""
     global __NB_TYPECHECKER
     if __NB_TYPECHECKER is not None:
