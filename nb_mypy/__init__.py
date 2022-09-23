@@ -18,7 +18,7 @@ import ast
 import functools
 import logging
 import re
-from typing import Optional, Set
+from typing import Optional, Set, List
 
 import astor  # type: ignore
 from mypy import api
@@ -236,6 +236,7 @@ class MypyIPython:
         self.mypy_typecheck: bool = True
         self.debug: bool = False
         self.config_file: Optional[str] = None
+        self.additional_args: List[str] = []
 
         self.logger = logging.getLogger('nb-mypy')
         self.logger.setLevel(logging.DEBUG)
@@ -283,9 +284,17 @@ class MypyIPython:
             if self.debug:
                 self.logger.debug(
                     "Program before typechecking:\n%s", self.mypy_cells)
+            
+            if self.debug:
+                self.logger.debug(
+                    "Args passed to mypy API:\n%s", ['--ignore-missing-imports', '--allow-redefinition'] + self.additional_args)
 
             mypy_result = api.run(
-                ['--ignore-missing-imports', '--allow-redefinition', '-c', self.mypy_cells])
+                ['--ignore-missing-imports', '--allow-redefinition'] + self.additional_args + ['-c', self.mypy_cells])
+
+            if self.debug:
+                self.logger.debug(
+                    "mypy result:\n%s", mypy_result)
 
             if mypy_result[0]:
                 for line in mypy_result[0].strip().split('\n'):
@@ -302,6 +311,10 @@ class MypyIPython:
 
             if mypy_result[1]:
                 self.logger.error(mypy_result[1])
+                if mypy_result[2] == 2:
+                    self.logger.error("There is probably an error in the extra arguments that were provided via mypy-options: '%s'", self.additional_args)
+                    self.logger.error("So we will disable the extra arguments.")
+                    self.additional_args = []
 
             if self.debug:
                 self.logger.debug("Finished type checking")
@@ -382,6 +395,10 @@ class MypyIPython:
         """Disable debug mode.
         """
         self.debug = False
+    def mypy_options(self, options: List[str]) -> None:
+        """Additional options to pass to mypy.
+        """
+        self.additional_args = options
 
 
 __NB_TYPECHECKER: Optional[MypyIPython] = None
@@ -418,9 +435,15 @@ def load_ipython_extension(ipython_shell: IPython.core.interactiveshell.Interact
             def unknown() -> None:
                 if __NB_TYPECHECKER is not None:
                     __NB_TYPECHECKER.logger.error(
-                        "Unknown argument\n Valid arguments: %s", list(switcher.keys()))
+                        "Unknown argument\n Valid arguments: %s", list(switcher.keys()) + ['mypy-options OPTIONS'])
 
-            switcher.get(line, unknown)()
+            if(line.startswith('mypy-options ')):
+                additional_options = line[len("mypy-options "):].split()
+                __NB_TYPECHECKER.mypy_options(additional_options)
+            elif(line == 'mypy-options'):
+                __NB_TYPECHECKER.mypy_options([])
+            else:
+                switcher.get(line, unknown)()
 
 
 def unload_ipython_extension(ipython_shell: IPython.core.interactiveshell.InteractiveShell) -> None:

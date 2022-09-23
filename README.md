@@ -14,19 +14,9 @@ python3 -m pip install nb_mypy
 Once installed, you can load it via `%load_ext nb_mypy` in a cell of  a Jupyter notebook using the IPython kernel.
 
 ### Installation from source
-The package is build via PyPA's `build`, make sure you have the latest available via 
+The package can also be installed from source, using `setup.py` like:
 ```bash
-python3 -m pip install --upgrade build
-```
-
-You can then build the package from the current directory where `pyproject.toml` is located:
-```bash
-python3 -m build
-```
-
-Now you can install it using 
-```bash
-python3 -m pip install --no-index --find-links=./dist nb_mypy
+python3 setup.py install --user
 ```
 
 ## Usage
@@ -45,6 +35,7 @@ Here are the ways to use the line magic `%nb_mypy`
 * `%nb_mypy Off`: disable automatic type checking
 * `%nb_mypy DebugOn`: enable debug mode
 * `%nb_mypy DebugOff`: disable debug mode
+* `%nb_mypy mypy-options` [OPTIONS]: Provide extra options to mypy (for example --strict)
 
 
 ## Examples
