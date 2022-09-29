@@ -16,7 +16,7 @@ Once installed, you can load it via `%load_ext nb_mypy` in a cell of  a Jupyter 
 ### Installation from source
 The package can also be installed from source, using pip:
 ```bash
-pip3 install .
+python3 -m pip install .
 ```
 
 ## Usage
