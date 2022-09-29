@@ -14,9 +14,9 @@ python3 -m pip install nb_mypy
 Once installed, you can load it via `%load_ext nb_mypy` in a cell of  a Jupyter notebook using the IPython kernel.
 
 ### Installation from source
-The package can also be installed from source, using `setup.py` like:
+The package can also be installed from source, using pip:
 ```bash
-python3 setup.py install --user
+pip3 install .
 ```
 
 ## Usage
