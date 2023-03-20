@@ -228,7 +228,7 @@ class MypyIPython:
     """
 
     def __init__(self) -> None:
-        self.mypy_cells: str = "from IPython import get_ipython\n"
+        self.mypy_cells: str = ""
         self.mypy_var_names: Set[str] = set()
         self.mypy_annotated_names: Set[str] = set()
         self.mypy_classfunc_names: Set[str] = set()

@@ -37,6 +37,17 @@ Here are the ways to use the line magic `%nb_mypy`
 * `%nb_mypy DebugOff`: disable debug mode
 * `%nb_mypy mypy-options` [OPTIONS]: Provide extra options to mypy (for example --strict)
 
+### Load automatically
+This package is an iPython extension, thus it can be loaded automatically by adding the following line to your iPython configuration file.
+```python
+c.InteractiveShellApp.extensions = ['nb_mypy']
+```
+The configuration file can (probably) be found at `~/.ipython/profile_default/ipython_config.py` or created by executing `ipython profile create`.
+To add options, for instance, always have strict type checking on, you can add the following.
+```python
+c.InteractiveShellApp.exec_lines = ['%nb_mypy mypy-options --strict']
+```
+
 
 ## Examples
 
