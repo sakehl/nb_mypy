@@ -25,7 +25,7 @@ from mypy import api
 import IPython  # type: ignore
 from IPython.core.magic import register_line_magic  # type: ignore
 
-from nb_mypy.version import __version__
+from nb_mypy._version import __version__
 
 
 class RevealRemover(ast.NodeTransformer):
