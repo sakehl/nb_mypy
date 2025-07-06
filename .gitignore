@@ -8,3 +8,5 @@ build/
 env/
 nb_mypy.egg-info/
 dist/
+
+UNKNOWN.egg-info/
