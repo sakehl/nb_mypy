@@ -10,3 +10,5 @@ nb_mypy.egg-info/
 dist/
 
 UNKNOWN.egg-info/
+
+nb_mypy/_version.py
